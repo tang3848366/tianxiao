@@ -10,150 +10,85 @@
 #include<complex>
 #include<set>
 #include<assert.h>
+#include<bitset>
 using namespace std;
-typedef long long ll;
-typedef complex<double> point;
-double eps=1e-10;
-const double PI=acos(-1.0);
-double det(point a,point b){return (conj(a)*b).imag();}
-double dot(point a,point b){return (a*conj(b)).real();}
-inline int sgn(double n){return abs(n)<eps?0:(n<0?-1:1);}
-int cross(point s,point a,point b)
+#define MAXN 300
+int equ,var;
+int a[MAXN][MAXN];
+int d[MAXN];
+int free_d[MAXN];
+int free_num;
+int Gause()
 {
-    point u=a-s;
-    point v=b-s;
-    if(sgn(det(u,v))>0) return 1;
-    if(sgn(det(u,v))<0) return -1;
-    if(sgn(dot(u,v))<=0) return 0;
-    if(sgn(abs(u)-abs(v))>0) return 2;
-    return -2;
-}
-double Ang;
-point O=point(0,0);
-struct line: public vector<point>
-{
-    double k;
-    line(){}
-    line(point a,point b){
-        push_back(a),push_back(b);
-        k=atan2((b-a).imag(),(b-a).real());
-    }
-};
-point vec(line a){return a[1]-a[0];}
-point vec(point a){return a/abs(a);}
-point InterLL(const line u,const line v)
-{
-    double a=det(vec(u),vec(v));
-    double b=det(vec(u),u[1]-v[0]);
-    if(sgn(a)==0) return v[0];
-    point temp=v[0]+(b/a)*vec(v);
-//    cout<<temp.real()<<" "<<temp.imag()<<endl;
-    return v[0]+b/a*vec(v);
-}
-bool operator < (const line& a,const line& b)
-{
-    line t=line(O,point(cos(Ang),sin(Ang)));
-    return sgn(  abs(InterLL(t,a) ) - abs(InterLL(t,b) ) )<0;
-}
-bool operator == (const line& a,const line& b)
-{
-    line t=line(O,point(cos(Ang),sin(Ang)));
-    return sgn(  abs(InterLL(t,a) ) - abs(InterLL(t,b) ) )==0;
-}
-int S,W,K;
-#define MAXN 101000
-point kid[MAXN];
-line wall[MAXN];
-line seg[2*MAXN];
-struct node{
-    int id,kind;
-    double ang;
-    node(int _id=0,int _kind=0,double _ang=0):id(_id),kind(_kind),ang(_ang){}
-    bool operator <(const node &a)const{
-        if(sgn(ang-a.ang)!=0)
-            return ang<a.ang;
-        return kind < a.kind;
-    }
-}event[5*MAXN];
-double getAng(point a){ return atan2(a.imag(),a.real());}
-int num;
-set<line> q;
-int solve()
-{
-    int ret=0;
-    num=0;
-    for(int i=1;i<K;i++)
+    int max_r,col,k;
+    free_num=0;
+    for(k=0,col=0;k<equ&&col<var;k++,col++)
     {
-        event[num++]=node(i,1,getAng(kid[i]-kid[0]));
-    }
-    for(int i=0;i<W;i++)
-    {
-        seg[i]=line(wall[i][0]-kid[0],wall[i][1]-kid[0]);
-        if(getAng(seg[i][0])>getAng(seg[i][1]))
-            swap(seg[i][0],seg[i][1]);
-        int flag=1;
-        point t;
-        if(sgn(det(vec(seg[i]),point(-1,0)))!=0)
+        max_r=k;
+        for(int i=k+1;i<equ;i++)
+            if( abs(a[i][col]) > abs(a[max_r][col]))
+                max_r=i;
+        if(a[max_r][col] == 0)
         {
-            t=InterLL(seg[i],line(O,point(-1,0)));
-            if(sgn(abs(getAng(seg[i][0])-getAng(seg[i][1]))-PI)>0)
-                flag=0;
+            k--;
+            free_d[free_num++] =col;
+            continue;
         }
-        if(flag)
+        if(max_r != k)
         {
-            event[num++]=node(i,0,getAng(seg[i][0]));
-            event[num++]=node(i,2,getAng(seg[i][1]));
+            for(int j=col;j<var+1;j++)
+                swap(a[k][j],a[max_r][j]);
         }
-        else{
-            event[num++]=node(i,0,-PI);
-            event[num++]=node(i,2,getAng(seg[i][0]));
-            event[num++]=node(i,0,getAng(seg[i][1]));
-            event[num++]=node(i,2,PI);
-        }
-    }
-    sort(event,event+num);
-    q.clear();
-    for(int i=0;i<num;i++)
-    {
-        Ang=event[i].ang;
-        if(event[i].kind==1)
+        for(int i=k+1;i<equ;i++)
         {
-            if(q.empty() || sgn(  abs( InterLL(line(O,point(cos(Ang),sin(Ang))),*q.begin() ) )- abs(kid[event[i].id]-kid[0]) )>0 )
-                ret++;
-        }
-        else{
-            if(event[i].kind==0)
-                q.insert(seg[event[i].id]);
-            else {
-                q.erase(seg[event[i].id]);
+            if(a[i][col]!=0)
+            {
+                for(int j=col;j<var+1;j++)
+                    a[i][j]^=a[k][j];
             }
         }
     }
-    return ret;
+    for(int i=k;i<equ;i++)
+        if(a[i][col]!=0)
+            return -1;
+    if(k<var) return var-k;
+    for(int i=var-1;i>=0;i--)
+    {
+        d[i]=a[i][var];
+        for(int j=i+1;j<var;j++)
+            d[i]^=(a[i][j] && d[j]);
+    }
+    return 0;
 }
-
+int x[MAXN],y[MAXN];
 int main()
 {
     freopen("in.txt","r",stdin);
-    while(~scanf("%d%d%d",&S,&K,&W))
+    int T;
+    scanf("%d",&T);
+    while(T--)
     {
-        for(int i=0;i<K;i++)
+        int n;
+        scanf("%d",&n);
+        for(int i=0;i<n;i++)
+            scanf("%d",&x[i]);
+        for(int i=0;i<n;i++)
+            scanf("%d",&y[i]);
+        int p,q;
+        memset(a,0,sizeof a);
+        while(~scanf("%d%d",&p,&q))
         {
-            double x,y;
-            scanf("%lf%lf",&x,&y);
-            kid[i]=point(x,y);
+            if(p==0&&q==0)
+                break;
+           a[q-1][p-1]=1;
         }
-        for(int i=0;i<W;i++)
-        {
-            double x1,y1,x2,y2;
-            scanf("%lf%lf%lf%lf",&x1,&y1,&x2,&y2);
-            wall[i]=line(point(x1,y1),point(x2,y2));
-        }
-        for(int i=0;i<S;i++)
-        {
-            swap(kid[0],kid[i]);
-            printf("%d\n",solve());
+        for(int i=0;i<n;i++)
+            a[i][i]=1,a[i][n]=(x[i]^y[i]);
+        equ=var=n;
+        int res=Gause();
+        if(res<0)printf("Oh,it's impossible~!!\n");
+        else{
+            printf("%d\n",1<<res);
         }
     }
-    return 0;
 }
